@@ -1,0 +1,8 @@
+[package]
+name = "baby-step-giant-step"
+version = "0.1.0"
+authors = ["Cristian Vergara <cristian.vergara@bookspan.com>"]
+
+[dependencies]
+rust-gmp = "0.3.2"
+rust-mpfr = "0.1.7"
