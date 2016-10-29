@@ -1,0 +1,23 @@
+[root]
+name = "playground"
+version = "0.1.0"
+dependencies = [
+ "rust-gmp 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "libc"
+version = "0.2.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "rust-gmp"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "libc 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[metadata]
+"checksum libc 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)" = "044d1360593a78f5c8e5e710beccdc24ab71d1f01bc19a29bcacdba22e8475d8"
+"checksum rust-gmp 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "4cd7d57377b309a73f69e164109203aa9ab3fee6ea68ac5fb76e2edb50662e9b"
