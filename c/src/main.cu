@@ -21,7 +21,6 @@ exit(1); \
 #define MOD_ELEM_2 9223371487099224063
 #define MOD_ELEM_3 512
 
-
 struct vec_t {
   uint32_t * elems;
   int size;
@@ -126,10 +125,6 @@ int main(int argc, char ** argv) {
   mpz_clear(mPTest);
   fclose(fp);
 
-
-  gmp_printf("mQr: %Zd\n", mQr);
-  gmp_printf("mNr: %Zd\n", mNr);
-
   dim3 block (1024);
   dim3 grid (((primeVector->size)+block.x - 1)/block.x);
 
@@ -149,43 +144,31 @@ int main(int argc, char ** argv) {
   uint32_t * dResults;
 
   cudaMalloc((uint32_t**)&dResults, primeVector->size * sizeof(uint32_t));
-  cudam_t five = cudam_init();
-  five[0] = 5;
-  cudam_t testNum = cudam_init();
-  testNum[0] = 1;
 
-
-  // Let's move it along a bit.
-  int pow = 1;
-  for (; pow < 87; pow++) {
-    cudam_multm(testNum, testNum, five, modulus);
-    printf("power%d: %llu,%llu,%llu,%llu\n", pow, testNum[0], testNum[1], testNum[2], testNum[3]);
-  }
-
-  cudam_t max = cudam_init();
-  max[4] = 1;
+  mpz_t testNum, pow;
+  mpz_init(testNum);
+  mpz_init(pow);
+  mpz_set_ui(pow, 90);
+  mpz_set_ui(testNum, 5);
+  mpz_powm(testNum, testNum, pow, mP);
 
   uint64_t* testNumGPU;
 
   cudaMalloc((uint64_t**)&testNumGPU, 4* sizeof(uint64_t));
 
-  cudam_t candidate = cudam_init();
-  cudam_t fiveTest = cudam_init();
-
   while (1) {
 
-    cudam_multm(testNum, testNum, testNum, modulus);
+    mpz_powm_ui(testNum, testNum, 2, mP);
 
-    pow += 1;
+    mpz_mul_ui(pow, pow, 2);
+    mpz_mod(pow, pow, mP);
 
-    printf("pow: %d\n", pow);
+    gmp_printf("pow: %Zd\n", pow);
 
-    cudam_mod(fiveTest, testNum, five);
     mpz_t mTest, mGcd;
     mpz_init(mTest);
     mpz_init(mGcd);
-    mpz_import(mTest, 4, -1, sizeof(uint64_t), 0, 0, testNum);
-
+    mpz_set(mTest, testNum);
     mpz_gcd(mGcd, mTest, mNr);
 
 
@@ -213,7 +196,12 @@ int main(int argc, char ** argv) {
 
     if (hasNonQFactor == 1) continue;
 
-    // Reset results array
+
+    gmp_printf("FOUND SMOOTH: %Zd\n", pow);
+
+    return 0;
+
+    /*// Reset results array
     for (int i = 0; i < primeVector->size; ++i) {
       results[i] = 0;
     }
@@ -259,7 +247,7 @@ int main(int argc, char ** argv) {
       mpz_clear(mQr);
       mpz_clear(mNr);
       mpz_clear(mP);
-    }
+    }*/
   }
 
 }
