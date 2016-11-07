@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <limits.h>
+#include <gmp.h>
 
 #define CHECK(call) \
 { \
@@ -228,7 +229,9 @@ __host__ __device__ void multInt256Mod(uint256_t a, uint256_t b, uint256_t c, ui
   int currentCell;
   uint64_t bit;
   uint256_t a_1 = initInt256();
+  uint256_t b_1 = initInt256();
   copyInt256(a, a_1);
+  copyInt256(b, b_1);
   clearInt256(c);
   while (currentBit > 0) {
     if (currentBit % 64 == 0) {
@@ -236,7 +239,7 @@ __host__ __device__ void multInt256Mod(uint256_t a, uint256_t b, uint256_t c, ui
       bit = HIGH_BIT;
     }
     sllInt256(c, 1);
-    if (b[currentCell] & bit) {
+    if (b_1[currentCell] & bit) {
       addInt256(a_1, c, c);
     }
     modInt256(c, p, c);
@@ -244,6 +247,7 @@ __host__ __device__ void multInt256Mod(uint256_t a, uint256_t b, uint256_t c, ui
     currentBit--;
   }
   free(a_1);
+  free(b_1);
 }
 
 __host__ __device__ void multInt256(uint256_t a, uint256_t b, uint256_t c) {
@@ -355,9 +359,28 @@ int main(int argc, char ** argv) {
   return 0;
   */
 
+  uint256_t modulus = initInt256();
+  modulus[0] = MOD_ELEM_0;
+  modulus[1] = MOD_ELEM_1;
+  modulus[2] = MOD_ELEM_2;
+  modulus[3] = MOD_ELEM_3;
+
   printf("Loading prime factor base\n");
 
   FILE *fp;
+
+  mpz_t mQr, mNr, mP, mQrTest, mPTest;
+  mpz_init(mQr);
+  mpz_init(mNr);
+  mpz_init(mP);
+  mpz_init(mQrTest);
+  mpz_init(mPTest);
+  mpz_set_ui(mQr, 1);
+  mpz_set_ui(mNr, 1);
+  mpz_import(mP, 4, -1, sizeof(uint64_t), 0, 0, modulus);
+  mpz_set(mQrTest, mP);
+  mpz_add_ui(mQrTest, mQrTest, 1);
+  mpz_divexact_ui(mQrTest, mQrTest, 4);
 
   fp = fopen("./primes.txt", "r");
   vec_t * primeVector = initVec();
@@ -374,19 +397,28 @@ int main(int argc, char ** argv) {
       }
     } while (c >= '0' && c <= '9');
     if (a != 0) {
-      insert(primeVector, a);
+      mpz_set_ui(mPTest, a);
+      mpz_powm(mPTest, mPTest, mQrTest, mP);
+      mpz_powm_ui(mPTest, mPTest, 2, mP);
+      if (mpz_cmp_d(mPTest, a) == 0) {
+        mpz_mul_ui(mQr, mQr, a);
+        insert(primeVector, a);
+      } else {
+        mpz_mul_ui(mNr, mNr, a);
+      }
     }
   }
+
+  mpz_clear(mQrTest);
+  mpz_clear(mPTest);
   fclose(fp);
+
+
+  gmp_printf("mQr: %Zd\n", mQr);
+  gmp_printf("mNr: %Zd\n", mNr);
 
   dim3 block (1024);
   dim3 grid (((primeVector->size)+block.x - 1)/block.x);
-
-  uint256_t modulus = initInt256();
-  modulus[0] = MOD_ELEM_0;
-  modulus[1] = MOD_ELEM_1;
-  modulus[2] = MOD_ELEM_2;
-  modulus[3] = MOD_ELEM_3;
 
   printf("Done loading prime factor base\n");
 
@@ -409,6 +441,7 @@ int main(int argc, char ** argv) {
   uint256_t testNum = initInt256();
   testNum[0] = 1;
 
+
   // Let's move it along a bit.
   int pow = 1;
   for (; pow < 87; pow++) {
@@ -417,7 +450,7 @@ int main(int argc, char ** argv) {
   }
 
   uint256_t max = initInt256();
-  max[3] = 1;
+  max[4] = 1;
 
   uint64_t* testNumGPU;
 
@@ -428,23 +461,44 @@ int main(int argc, char ** argv) {
 
   while (1) {
 
-    multInt256Mod(testNum, five, testNum, modulus);
+    multInt256Mod(testNum, testNum, testNum, modulus);
 
     pow += 1;
 
-    //printf("pow: %d\n", pow);
+    printf("pow: %d\n", pow);
 
     modInt256(testNum, five, fiveTest);
+    mpz_t mTest, mGcd;
+    mpz_init(mTest);
+    mpz_init(mGcd);
+    mpz_import(mTest, 4, -1, sizeof(uint64_t), 0, 0, testNum);
 
-    if (cmpInt256(fiveTest, max) == -1) {
-      printf("skip (max): %d\n", pow);
+    mpz_gcd(mGcd, mTest, mNr);
+
+
+    if (mpz_cmp_ui(mGcd, 1) != 0) {
+      //printf("Has a factor in mNr. Continuing.\n");
+      mpz_clear(mTest);
+      mpz_clear(mGcd);
       continue;
     }
 
-    if (isZeroInt256(fiveTest) == 1) {
-      printf("skip (mod): %d\n", pow);
-      continue;
+    mpz_gcd(mGcd, mTest, mQr);
+    int hasNonQFactor = 0;
+    while (hasNonQFactor == 0 && mpz_cmp(mTest, mGcd) != 0) {
+      if (mpz_cmp_ui(mGcd, 1) == 0) {
+        //printf("Has a factor not in mQr. Continuing.\n");
+        hasNonQFactor = 1;
+        continue;
+      }
+      mpz_divexact(mTest, mTest, mGcd);
+      mpz_gcd(mGcd, mTest, mQr);
     }
+
+    mpz_clear(mTest);
+    mpz_clear(mGcd);
+
+    if (hasNonQFactor == 1) continue;
 
     // Reset results array
     for (int i = 0; i < primeVector->size; ++i) {
@@ -467,8 +521,6 @@ int main(int argc, char ** argv) {
 
     //printf("results copied back\n");
 
-    printf("pow: %d\n", pow);
-
     clearInt256(candidate);
     candidate[0] = 1;
 
@@ -490,8 +542,11 @@ int main(int argc, char ** argv) {
       for (int i = 0; i < 4; ++i) {
         printf("cand: %llu test: %llu\n", candidate[i], testNum[i]);
       }
+      return 0;
+      mpz_clear(mQr);
+      mpz_clear(mNr);
+      mpz_clear(mP);
     }
   }
 
-  return 0;
 }
