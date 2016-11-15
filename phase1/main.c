@@ -14,7 +14,6 @@ struct thread_data {
   mpz_t pollardTest;
   mpz_t pollardTestPrime;
   mpz_t mQrTest;
-  uint64_t smallNonQuad;
 };
 
 struct vec_t {
@@ -127,15 +126,12 @@ int pollard_rho(mpz_t d, mpz_t n, int limit) {
   mpz_set_ui(a, 1);
   for (i = 0; i < limit && mpz_cmp_ui(d, 1) == 0; ++i) {
     mpz_powm_ui(x, x, 2, n);
-    mpz_sub_ui(x, x, 1);
-    mpz_powm_ui(y, x, 2, n);
-    mpz_sub_ui(y, y, 1);
+    mpz_powm_ui(y, y, 4, n);
     mpz_sub(diff, x, y);
     mpz_abs(diff, diff);
 
-    mpz_mul(a, a, diff);
+    mpz_gcd(d, diff, n);
   }
-  mpz_gcd(d, a, n);
   mpz_clear(x);
   mpz_clear(y);
   mpz_clear(diff);
@@ -245,10 +241,13 @@ void *find_smooth_function( void *ptr ) {
     found = 0;
     factors->size = 0;
     powers->size = 0;
+    mpz_add_ui(pow, pow, 3);
+    mpz_mod(pow, pow, td->mP);
     //mpz_mul(testNum, testNum, base);
     mpz_powm_ui(testNum, testNum, 3, td->mP);
 
-    if (mpz_divisible_ui_p(testNum, 5) != 0) {
+
+    /*if (mpz_divisible_ui_p(testNum, 5) != 0) {
       attemptCount += 1;
       if (attemptCount % 10000 == 0) {
         diff = clock() - start;
@@ -257,15 +256,8 @@ void *find_smooth_function( void *ptr ) {
         start = clock();
       }
       continue;
-    }
-
-
+    }*/
     mpz_set(softTest, testNum);
-
-    // Factor out powers of 2.
-    while (mpz_even_p(softTest) != 0) {
-      mpz_tdiv_q_2exp(softTest, softTest, 1);
-    }
     mpz_sub_ui(aBase, softTest, 1);
 
     mpz_powm(a, pollardTestPrime, aBase, softTest);
@@ -273,95 +265,96 @@ void *find_smooth_function( void *ptr ) {
     if (mpz_cmp_ui(a, 1) == 0) {
       attemptCount += 1;
       if (attemptCount % 10000 == 0) {
-        diff = clock() - start;
+        /*diff = clock() - start;
         msec = diff * 1000 / CLOCKS_PER_SEC;
         printf("Probably prime?: %lu, Time: %d\n", attemptCount, msec);
-        start = clock();
+        start = clock();*/
       }
       continue;
     }
 
-    for (i = 0; i < 100; ++i) {
+    /*for (i = 0; i < 100; ++i) {
       prime = td->primes->elems[i];
       while (mpz_divisible_ui_p(softTest, prime) != 0) {
         mpz_divexact_ui(softTest, softTest, prime);
       }
-    }
+    }*/
 
-    while (mpz_cmp(softTest, limit) > 0 && miller_rabin(softTest, 10, rand_state) != 1) {
+    /*if (mpz_sizeinbase(softTest, 10) > 55) {
+      attemptCount += 1;
+      continue;
+    }*/
+    while (failed == 0 && mpz_sizeinbase(softTest, 10) > 50 && miller_rabin(softTest, 10, rand_state) != 1) {
       // Pollard's p-1
-      iterations += 1;
       mpz_powm(modResult, pollardTestPrime, td->pollardTest, softTest);
       mpz_sub_ui(modResult, modResult, 1);
       mpz_gcd(gcd, softTest, modResult);
 
-      if (attemptCount % 10000 == 0) {
-        gmp_printf("p-1 factor: %Zd.\n", gcd);
-      }
+
       if (mpz_cmp_ui(gcd, largest) > 0) {
-        if (attemptCount % 10000 == 0) {
-            gmp_printf("too large!\n", gcd);
-          }
+
         failed = 1;
-        break;
       }
       // We're not adjusting any parameters. If we find nothing, throw it away.
       if (mpz_cmp_ui(gcd, 1) == 0 || mpz_cmp(gcd, softTest) == 0) {
-        if (attemptCount % 10000 == 0) {
-          printf("could not factor.\n");
-        }
         failed = 1;
-        break;
       }
-
-      mpz_divexact(softTest, softTest, gcd);
-      if (attemptCount % 10000 == 0) {
-        gmp_printf("next: %Zd.\n", softTest);
+      if (failed != 1) {
+        mpz_divexact(softTest, softTest, gcd);
+        iterations += 1;
       }
     }
-    /*mpz_sqrt(a, softTest);
-    for (i = 0; i < 10000; ++i) {
-      mpz_add_ui(a, a, 1);
-      mpz_pow_ui(b, a, 2);
-      mpz_sub(b, b, testNum);
-      if (mpz_perfect_square_p(b)) {
-        found = 1;
-        break;
-      }
-    }
-
-    if (found == 0) {
+    if (mpz_sizeinbase(softTest, 10) > 50) {
       attemptCount += 1;
-      if (attemptCount % 10000 == 0) {
+      if (attemptCount % 100 == 0) {
         diff = clock() - start;
         msec = diff * 1000 / CLOCKS_PER_SEC;
-        printf("Cannot break Time: %d, attempts: %d\n", msec, attemptCount);
+        gmp_printf("P-1 factored to %Zd\n", softTest);
+        printf("Factor failure size: %d Attempts: %lu, Time: %d, Iterations: %d\n", mpz_sizeinbase(softTest, 10), attemptCount, msec, iterations);
         start = clock();
       }
       continue;
-    }*/
+    }
+    failed = 0;
 
-    /*mpz_gcd(gcd, softTest, td->primeProd);
-
-    if (mpz_cmp_ui(gcd, 1) == 0) {
-      attemptCount += 1;
-      if (attemptCount % 10000 == 0) {
-        diff = clock() - start;
-        msec = diff * 1000 / CLOCKS_PER_SEC;
-        gmp_printf("%Zd\n", softTest);
-        printf("No factors Attempts: %lu, Time: %d, Iterations: %d\n", attemptCount, msec, iterations);
-        start = clock();
+    iterations = 0;
+    while (failed != 1 && mpz_sizeinbase(softTest, 10) > 24) {
+      mpz_set_ui(x, 2);
+      mpz_set_ui(y, 2);
+      mpz_set_ui(d, 1);
+      mpz_set_ui(gcd, 1);
+      found = 0;
+      for (i = 0; i < 6500 && mpz_cmp_ui(d, 1) == 0; ++i) {
+        mpz_powm_ui(x, x, 2, softTest);
+        mpz_add_ui(x, x, 1);
+        mpz_powm_ui(y, y, 2, softTest);
+        mpz_add_ui(y, y, 1);
+        mpz_powm_ui(y, y, 2, softTest);
+        mpz_add_ui(y, y, 1);
+        mpz_sub(diffm, x, y);
+        mpz_abs(diffm, diffm);
+        mpz_gcd(d, diffm, softTest);
+        if (mpz_cmp_ui(d, 1) != 0) {
+          found = 1;
+          mpz_divexact(softTest, softTest, d);
+          break;
+        }
       }
-      continue;
-    }*/
+      if (found == 1) {
+        iterations += 1;
+      }
+      if (found == 0 || mpz_cmp_ui(softTest, largest) > 0 && miller_rabin(softTest, 10, rand_state) == 1) {
+        failed = 1;
+      }
+    }
 
-    if (mpz_cmp(softTest, limit) > 0 || failed == 1) {
+    if (mpz_sizeinbase(softTest, 10) > 24 || failed == 1) {
       attemptCount += 1;
-      if (attemptCount % 10000 == 0) {
+      if (attemptCount % 100 == 0) {
         diff = clock() - start;
         msec = diff * 1000 / CLOCKS_PER_SEC;
-        gmp_printf("%Zd\n", softTest);
-        printf("Factor failure Attempts: %lu, Time: %d, Iterations: %d\n", attemptCount, msec, iterations);
+        gmp_printf("rho factored to %Zd\n", softTest);
+        printf("Factor failure size: %d Attempts: %lu, Time: %d, Iterations: %d\n", mpz_sizeinbase(softTest, 10), attemptCount, msec, iterations);
         start = clock();
       }
       continue;
@@ -371,10 +364,8 @@ void *find_smooth_function( void *ptr ) {
     //gmp_printf("Limit: %Zd.\n", limit);
     mpz_set(factorNum, softTest);
     //
+    gmp_printf("Attempt: %d, Factoring: %Zd.\n", attemptCount, testNum);
     for (i = 1; i < numberOfPrimes; i++) {
-      if (attemptCount % 10000 == 0) {
-        gmp_printf("Factoring: %Zd.\n", testNum);
-      }
       power = 0;
       prime = primes[i];
       while (mpz_divisible_ui_p(factorNum, 0) != 0) {
@@ -395,6 +386,7 @@ void *find_smooth_function( void *ptr ) {
 
     //gmp_printf("Fully factored: %Zd\n", testNum);
     if (mpz_cmp_ui(factorNum, 1) == 0) {
+      gmp_printf("Fully factored: %Zd\n", testNum);
       char powStr[100];
 
       mpz_get_str(powStr, 10, pow);
@@ -437,13 +429,14 @@ int main(int argc, char ** argv) {
   td.primes = initVec();
   td.smooth = initVec();
   mpz_t mPTest, primePow1, primePow2, aBase;
-  mpz_init(td.mP);
-  mpz_init(td.primeProd);
-  mpz_init(td.mQrTest);
   mpz_init(mPTest);
   mpz_init(aBase);
   mpz_init(primePow1);
   mpz_init(primePow2);
+
+  mpz_init(td.mP);
+  mpz_init(td.primeProd);
+  mpz_init(td.mQrTest);
   mpz_init(td.pollardTest);
   mpz_init(td.pollardTestPrime);
   mpz_set_ui(td.pollardTest, 1);
@@ -471,10 +464,10 @@ int main(int argc, char ** argv) {
       //mpz_set_ui(mPTest, a);
       //mpz_powm(mPTest, mPTest, mQrTest, td.mP);
       //mpz_powm_ui(mPTest, mPTest, 2, td.mP);
-      if (a < 2000) {
+      if (a < 6500) {
         mpz_set_ui(primePow1, a);
         mpz_set(primePow2, primePow1);
-        while (mpz_cmp_ui(primePow1, 2000) < 0) {
+        while (mpz_cmp_ui(primePow1, 6500) < 0) {
           mpz_swap(primePow2, primePow1);
           mpz_mul_ui(primePow1, primePow1, a);
         }
