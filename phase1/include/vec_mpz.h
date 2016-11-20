@@ -10,8 +10,9 @@ struct vec_mpz_t {
 };
 
 struct vec_mpz_t* vec_mpz_init();
+struct vec_mpz_t* vec_mpz_init_size(size_t);
 void vec_mpz_insert(struct vec_mpz_t*, mpz_t);
 void vec_mpz_free(struct vec_mpz_t* vec);
-void vec_mpz_product_tree(struct vec_mpz_t* vec);
+struct vec_mpz_t* vec_mpz_product_tree(struct vec_mpz_t* vec);
 
 #endif
