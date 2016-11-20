@@ -40,14 +40,14 @@ int main(int argc, char ** argv) {
   mpz_init(data.modulus);
   mpz_set_str(
     data.modulus,
-    "3217014639198601771090467299986349868436393574029172456674199",
+    "1981212849318729301218266208863",
     10
   );
 
   mpz_init(data.base);
   mpz_set_str(
     data.base,
-    "1483470583978676987274572113759546747043713044116589831659689",
+    "5",
     10
   );
 
@@ -81,7 +81,7 @@ int main(int argc, char ** argv) {
 }
 
 void *find_smooth_function( void *ptr ) {
-  int i, msec, attempts = 0;
+  int i, msec, failed, attempts = 0;
 
   clock_t start, diff;
 
@@ -93,8 +93,8 @@ void *find_smooth_function( void *ptr ) {
 
   uint64_t largest = data->primes->elems[data->primes->size - 1];
 
-  mpz_t pow, test_num, factor_num;
-  mpz_inits(pow, test_num, factor_num, 0);
+  mpz_t pow, test_num, pollard_num, pollard_factor, factor_num;
+  mpz_inits(pow, test_num, pollard_num, pollard_factor, factor_num, 0);
 
   char filename[128];
 
@@ -106,6 +106,7 @@ void *find_smooth_function( void *ptr ) {
 
   uint64_t *primes = data->primes->elems;
   int number_of_primes = data->primes->size;
+  uint64_t largest_prime = data->primes->elems[data->primes->size - 1];
   uint64_t prime;
   start = clock();
 
@@ -114,7 +115,6 @@ void *find_smooth_function( void *ptr ) {
 
     mpz_urandomm(pow, rand_state, data->modulus);
     mpz_powm(test_num, data->base, pow, data->modulus);
-    mpz_set(factor_num, test_num);
 
     if (attempts % 1000 == 0) {
       diff = clock() - start;
@@ -122,8 +122,25 @@ void *find_smooth_function( void *ptr ) {
       printf("Attempt count: %d Time: %d\n", attempts, msec);
       start = clock();
     }
+
+    mpz_set(pollard_num, test_num);
+
+    failed = 0;
+    while (failed == 0 && mpz_cmp_ui(pollard_num, largest_prime) > 0) {
+      if (pollard_rho(pollard_factor, pollard_num, 2800) == 1) {
+        mpz_divexact(pollard_num, pollard_num, pollard_factor);
+      } else {
+        failed = 1;
+      }
+    }
+
+    if (failed == 1) {
+      attempts += 1;
+      continue;
+    }
     // Some tests pass at this point, break it down (trial division)
 
+    mpz_set(factor_num, test_num);
     struct vec_uint64_t *factors = vec_uint64_init();
     struct vec_uint64_t *powers = vec_uint64_init();
     int power;
