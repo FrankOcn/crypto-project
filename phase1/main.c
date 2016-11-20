@@ -9,33 +9,11 @@
 struct thread_data {
   mpz_t mP;
   struct vec_t* primes;
-  struct vec_t* smooth;
   mpz_t primeProd;
   mpz_t pollardTest;
   mpz_t pollardTestPrime;
   mpz_t mQrTest;
 };
-
-struct vec_t {
-  uint64_t * elems;
-  int size;
-  int capacity;
-};
-
-void insert(struct vec_t* vec, uint64_t elem) {
-  int i;
-  if (vec->size == vec->capacity) {
-    vec->capacity = vec->capacity * 2;
-    uint64_t* newElems = (uint64_t *)malloc(vec->capacity * sizeof(uint64_t));
-    for (i = 0; i < vec->size; ++i) {
-      newElems[i] = vec->elems[i];
-    }
-    free(vec->elems);
-    vec->elems = newElems;
-  }
-  vec->elems[vec->size] = elem;
-  vec->size++;
-}
 
 int miller_rabin(mpz_t n, int testLimit, gmp_randstate_t rand_state) {
   int i, j, r;
@@ -138,20 +116,6 @@ int pollard_rho(mpz_t d, mpz_t n, int limit) {
   return i == limit ? -1 : 1;
 }
 
-struct vec_t* initVec() {
-  struct vec_t* newVec = (struct vec_t*)malloc(sizeof(struct vec_t));
-  newVec->capacity = 32;
-  newVec->size = 0;
-  newVec->elems = (uint64_t *)malloc(newVec->capacity * sizeof(uint64_t));
-  return newVec;
-}
-
-void clear(struct vec_t* vec) {
-  free(vec->elems);
-  vec->capacity = 64;
-  vec->size = 0;
-  vec->elems = (uint64_t *)malloc(vec->capacity * sizeof(uint64_t));
-}
 
 void *find_smooth_function( void *ptr ) {
   int i;
@@ -164,22 +128,10 @@ void *find_smooth_function( void *ptr ) {
   gmp_randstate_t rand_state;
   struct thread_data * td;
   td = (struct thread_data*)ptr;
-  mpz_t testNum, pow, phi, base, modResult, gcd, softTest, aBase, poll, pollardTestPrime;
-
-  mpz_t limit, factorNum;
-
-  mpz_t a, a2, b, d;
-
-  mpz_t x, y, diffm;
-  mpz_init(x);
-  mpz_init(y);
-  mpz_init(diffm);
-  mpz_init(a);
-  mpz_init(b);
-  mpz_init(d);
 
   mpz_t quotient, remainder, num;
 
+  gmp_randstate_t rand_state;
   gmp_randinit_mt(rand_state);
   gmp_randseed_ui(rand_state, pthread_self());
   mpz_init(testNum);
@@ -232,58 +184,18 @@ void *find_smooth_function( void *ptr ) {
   start = clock();
 
 
-  mpz_urandomm(pow, rand_state, td->mP);
-  mpz_powm(testNum, base, pow, td->mP);
-
   while (1) {
 
+    mpz_urandomm(pow, rand_state, td->mP);
+    mpz_powm(testNum, base, pow, td->mP);
     int failed = 0, iterations = 0;
     found = 0;
     factors->size = 0;
     powers->size = 0;
     mpz_add_ui(pow, pow, 3);
     mpz_mod(pow, pow, td->mP);
-    //mpz_mul(testNum, testNum, base);
     mpz_powm_ui(testNum, testNum, 3, td->mP);
 
-
-    /*if (mpz_divisible_ui_p(testNum, 5) != 0) {
-      attemptCount += 1;
-      if (attemptCount % 10000 == 0) {
-        diff = clock() - start;
-        msec = diff * 1000 / CLOCKS_PER_SEC;
-        printf("Five filter: Attempts: %lu, Time: %d\n", attemptCount, msec);
-        start = clock();
-      }
-      continue;
-    }*/
-    mpz_set(softTest, testNum);
-    mpz_sub_ui(aBase, softTest, 1);
-
-    mpz_powm(a, pollardTestPrime, aBase, softTest);
-
-    if (mpz_cmp_ui(a, 1) == 0) {
-      attemptCount += 1;
-      if (attemptCount % 10000 == 0) {
-        /*diff = clock() - start;
-        msec = diff * 1000 / CLOCKS_PER_SEC;
-        printf("Probably prime?: %lu, Time: %d\n", attemptCount, msec);
-        start = clock();*/
-      }
-      continue;
-    }
-
-    /*for (i = 0; i < 100; ++i) {
-      prime = td->primes->elems[i];
-      while (mpz_divisible_ui_p(softTest, prime) != 0) {
-        mpz_divexact_ui(softTest, softTest, prime);
-      }
-    }*/
-
-    /*if (mpz_sizeinbase(softTest, 10) > 55) {
-      attemptCount += 1;
-      continue;
-    }*/
     while (failed == 0 && mpz_sizeinbase(softTest, 10) > 50 && miller_rabin(softTest, 10, rand_state) != 1) {
       // Pollard's p-1
       mpz_powm(modResult, pollardTestPrime, td->pollardTest, softTest);
@@ -427,7 +339,6 @@ int main(int argc, char ** argv) {
 
   struct thread_data td;
   td.primes = initVec();
-  td.smooth = initVec();
   mpz_t mPTest, primePow1, primePow2, aBase;
   mpz_init(mPTest);
   mpz_init(aBase);
@@ -461,9 +372,6 @@ int main(int argc, char ** argv) {
       }
     } while (c >= '0' && c <= '9');
     if (a != 0) {
-      //mpz_set_ui(mPTest, a);
-      //mpz_powm(mPTest, mPTest, mQrTest, td.mP);
-      //mpz_powm_ui(mPTest, mPTest, 2, td.mP);
       if (a < 6500) {
         mpz_set_ui(primePow1, a);
         mpz_set(primePow2, primePow1);
@@ -473,38 +381,9 @@ int main(int argc, char ** argv) {
         }
         mpz_mul(td.pollardTest, td.pollardTest, primePow2);
       }
-      //if (a < 7000) {
-        /*mpz_set_ui(primePow1, a);
-        mpz_set(primePow2, primePow1);
-        while (mpz_cmp_ui(primePow1, 3000) < 0) {
-          mpz_swap(primePow2, primePow1);
-          mpz_mul_ui(primePow1, primePow1, a);
-        }*/
-        //mpz_mul_ui(td.primeProd, td.primeProd, a);
-      //}
-      //if (mpz_cmp_d(mPTest, a) == 0) {
-        insert(td.primes, a);
-
-        /*mpz_set_ui(primePow1, a);
-        mpz_set(primePow2, primePow1);
-        while (mpz_cmp(primePow1, td.mP) < 0) {
-          mpz_swap(primePow2, primePow1);
-          mpz_pow_ui(primePow1, primePow1, 2);
-        }
-        mpz_mul_ui(td.pollardTest, td.pollardTest, a);
-        printf("%d\n", a);*/
-      //}
+      insert(td.primes, a);
     }
   }
-
-  /*for (i = 0; i < 100000; ++i) {
-    mpz_set_ui(aBase, td.primes->elems[i]);
-    // Bug with mpz_sizeinbase. It segfaults if the base is greater than 2333.
-    exp = i < 341 ? mpz_sizeinbase(td.mP, td.primes->elems[i]) : 15;
-    mpz_powm_ui(aBase, aBase, exp, td.mP);
-    mpz_mul(td.pollardTest, td.pollardTest, aBase);
-  }*/
-
   fclose(fp);
 
   printf("Done loading prime factor base: %llu primes loaded.\n", td.primes->size);
