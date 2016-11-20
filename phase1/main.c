@@ -53,6 +53,9 @@ int main(int argc, char ** argv) {
 
   fp = fopen("./primes.txt", "r");
 
+  mpz_t p_1, p_2;
+  mpz_inits(p_1, p_2, 0);
+
   while (fscanf(fp, "%llu", &a) > 0) {
     vec_uint64_insert(data.primes, a);
   }
@@ -77,6 +80,7 @@ int main(int argc, char ** argv) {
     pthread_join(threads[i], &status);
   }
   mpz_clear(data.modulus);
+  mpz_clear(data.base);
   vec_uint64_free(data.primes);
 }
 
@@ -130,12 +134,21 @@ void *find_smooth_function( void *ptr ) {
     }
 
     eea_bounded_mpz( test_num, data->modulus, test_num_r, test_num_s, tmp->elems);
+    mpz_abs(test_num_s, test_num_s);
 
     mpz_set(pollard_num, test_num_r);
 
+    for (i = 0; i < 100; ++i) {
+      prime = primes[i];
+      while (mpz_divisible_ui_p(pollard_num, prime) != 0) {
+        mpz_divexact_ui(pollard_num, pollard_num, prime);
+      }
+    }
+
     failed = 0;
+
     while (failed == 0 && mpz_cmp_ui(pollard_num, largest_prime) > 0) {
-      if (pollard_rho(pollard_factor, pollard_num, 2800, tmp->elems) == 1) {
+      if (pollard_rho(pollard_factor, pollard_num, 6000, tmp->elems) == 1) {
         mpz_divexact(pollard_num, pollard_num, pollard_factor);
       } else {
         failed = 1;
@@ -146,8 +159,6 @@ void *find_smooth_function( void *ptr ) {
       attempts += 1;
       continue;
     }
-
-    // Some tests pass at this point, break it down (trial division)
 
     mpz_set(factor_num, test_num_r);
     struct vec_uint64_t *factors = vec_uint64_init();
@@ -173,11 +184,20 @@ void *find_smooth_function( void *ptr ) {
     }
 
     gmp_printf("Fully factored (r): %Zd\n", test_num_r);
+    gmp_printf("Testing (s): %Zd\n", test_num_s);
+
     mpz_set(pollard_num, test_num_s);
+
+    for (i = 0; i < 150; ++i) {
+      prime = primes[i];
+      while (mpz_divisible_ui_p(pollard_num, prime) != 0) {
+        mpz_divexact_ui(pollard_num, pollard_num, prime);
+      }
+    }
 
     failed = 0;
     while (failed == 0 && mpz_cmp_ui(pollard_num, largest_prime) > 0) {
-      if (pollard_rho(pollard_factor, pollard_num, 2800, tmp->elems) == 1) {
+      if (pollard_rho(pollard_factor, pollard_num, 6000, tmp->elems) == 1) {
         mpz_divexact(pollard_num, pollard_num, pollard_factor);
       } else {
         failed = 1;
