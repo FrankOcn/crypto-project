@@ -40,14 +40,14 @@ int main(int argc, char ** argv) {
   mpz_init(data.modulus);
   mpz_set_str(
     data.modulus,
-    "1981212849318729301218266208863",
+    "3217014639198601771090467299986349868436393574029172456674199",
     10
   );
 
   mpz_init(data.base);
   mpz_set_str(
     data.base,
-    "5",
+    "1483470583978676987274572113759546747043713044116589831659689",
     10
   );
 
@@ -96,8 +96,11 @@ void *find_smooth_function( void *ptr ) {
   // Initialize some test mpz_t for temp use in crypto util functions.
   struct vec_mpz_t* tmp = vec_mpz_init();
 
-  mpz_t pow, test_num, pollard_num, pollard_factor, factor_num;
-  mpz_inits(pow, test_num, pollard_num, pollard_factor, factor_num, 0);
+  mpz_t pow, test_num, test_num_r, test_num_s,
+    pollard_num, pollard_factor, factor_num;
+
+  mpz_inits(pow, test_num, test_num_r, test_num_s,
+    pollard_num, pollard_factor, factor_num, 0);
 
   char filename[128];
 
@@ -126,7 +129,9 @@ void *find_smooth_function( void *ptr ) {
       start = clock();
     }
 
-    mpz_set(pollard_num, test_num);
+    eea_bounded_mpz( test_num, data->modulus, test_num_r, test_num_s, tmp->elems);
+
+    mpz_set(pollard_num, test_num_r);
 
     failed = 0;
     while (failed == 0 && mpz_cmp_ui(pollard_num, largest_prime) > 0) {
@@ -141,9 +146,10 @@ void *find_smooth_function( void *ptr ) {
       attempts += 1;
       continue;
     }
+
     // Some tests pass at this point, break it down (trial division)
 
-    mpz_set(factor_num, test_num);
+    mpz_set(factor_num, test_num_r);
     struct vec_uint64_t *factors = vec_uint64_init();
     struct vec_uint64_t *powers = vec_uint64_init();
     int power;
@@ -161,8 +167,45 @@ void *find_smooth_function( void *ptr ) {
       }
     }
 
+    if (mpz_cmp_ui(factor_num, 1) != 0) {
+      attempts += 1;
+      continue;
+    }
+
+    gmp_printf("Fully factored (r): %Zd\n", test_num_r);
+    mpz_set(pollard_num, test_num_s);
+
+    failed = 0;
+    while (failed == 0 && mpz_cmp_ui(pollard_num, largest_prime) > 0) {
+      if (pollard_rho(pollard_factor, pollard_num, 2800, tmp->elems) == 1) {
+        mpz_divexact(pollard_num, pollard_num, pollard_factor);
+      } else {
+        failed = 1;
+      }
+    }
+
+    if (failed == 1) {
+      attempts += 1;
+      continue;
+    }
+
+    mpz_set(factor_num, test_num_s);
+
+    for (i = 0; i < number_of_primes; i++) {
+      power = 0;
+      prime = primes[i];
+      while (mpz_divisible_ui_p(factor_num, prime) != 0) {
+        mpz_divexact_ui(factor_num, factor_num, prime);
+        power += 1;
+      }
+      if (power != 0) {
+        vec_uint64_insert(factors, prime);
+        vec_uint64_insert(powers, power);
+      }
+    }
+
     if (mpz_cmp_ui(factor_num, 1) == 0) {
-      gmp_printf("Fully factored: %Zd\n", test_num);
+      gmp_printf("Fully factored (s): %Zd\n", test_num_s);
       char powStr[100];
 
       mpz_get_str(powStr, 10, pow);
