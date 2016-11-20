@@ -4,11 +4,11 @@
 
 struct vec_mpz_t* vec_mpz_init() {
   struct vec_mpz_t* vec = (struct vec_mpz_t*)malloc(sizeof(struct vec_mpz_t));
-  vec->capacity = 32;
+  vec->capacity = 8;
   vec->size = 0;
   vec->elems = (mpz_t *)malloc(vec->capacity * sizeof(mpz_t));
   int i;
-  for (i = 0; i < 32; ++i ) {
+  for (i = 0; i < vec->capacity; ++i ) {
     mpz_init(vec->elems[i]);
   }
   return vec;

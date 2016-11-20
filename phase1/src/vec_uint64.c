@@ -4,7 +4,7 @@
 
 struct vec_uint64_t* vec_uint64_init() {
   struct vec_uint64_t* vec = (struct vec_uint64_t*)malloc(sizeof(struct vec_uint64_t));
-  vec->capacity = 32;
+  vec->capacity = 8;
   vec->size = 0;
   vec->elems = (uint64_t *)malloc(vec->capacity * sizeof(uint64_t));
   return vec;
