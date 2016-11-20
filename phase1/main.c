@@ -93,6 +93,9 @@ void *find_smooth_function( void *ptr ) {
 
   uint64_t largest = data->primes->elems[data->primes->size - 1];
 
+  // Initialize some test mpz_t for temp use in crypto util functions.
+  struct vec_mpz_t* tmp = vec_mpz_init();
+
   mpz_t pow, test_num, pollard_num, pollard_factor, factor_num;
   mpz_inits(pow, test_num, pollard_num, pollard_factor, factor_num, 0);
 
@@ -127,7 +130,7 @@ void *find_smooth_function( void *ptr ) {
 
     failed = 0;
     while (failed == 0 && mpz_cmp_ui(pollard_num, largest_prime) > 0) {
-      if (pollard_rho(pollard_factor, pollard_num, 2800) == 1) {
+      if (pollard_rho(pollard_factor, pollard_num, 2800, tmp->elems) == 1) {
         mpz_divexact(pollard_num, pollard_num, pollard_factor);
       } else {
         failed = 1;

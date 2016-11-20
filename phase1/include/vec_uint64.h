@@ -10,6 +10,6 @@ struct vec_uint64_t {
 
 struct vec_uint64_t* vec_uint64_init();
 void vec_uint64_insert(struct vec_uint64_t*, uint64_t);
-void vec_uint64_free(struct vec_uint64_t* vec);
+void vec_uint64_free(struct vec_uint64_t*);
 
 #endif
