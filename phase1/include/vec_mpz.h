@@ -1,7 +1,7 @@
 #ifndef __VEC_MPZ_H__
 #define __VEC_MPZ_H__
 #include "stdint.h"
-#include "gmp.h"
+#include <gmp.h>
 
 struct vec_mpz_t {
   mpz_t * elems;
