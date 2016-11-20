@@ -38,3 +38,14 @@ void vec_mpz_free(struct vec_mpz_t* vec) {
   free(vec->elems);
   free(vec);
 }
+
+void vec_mpz_product_tree(struct vec_mpz_t* vec) {
+  int i = 0;
+  mpz_t tmp;
+  mpz_init(tmp);
+  for (i = 0; i < vec->size - 1; i += 2) {
+    mpz_mul(tmp, vec->elems[i], vec->elems[i+1]);
+    vec_mpz_insert(vec, tmp);
+  }
+  mpz_clear(tmp);
+}

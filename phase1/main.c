@@ -12,6 +12,7 @@ struct shared_data {
   mpz_t modulus;
   mpz_t base;
   struct vec_uint64_t* primes;
+  struct vec_mpz_t* prime_product_tree;
 };
 
 void *find_smooth_function( void * );
@@ -36,6 +37,7 @@ int main(int argc, char ** argv) {
   printf("Loading prime factor base\n");
 
   data.primes = vec_uint64_init();
+  data.prime_product_tree = vec_mpz_init();
 
   mpz_init(data.modulus);
   mpz_set_str(
@@ -53,12 +55,18 @@ int main(int argc, char ** argv) {
 
   fp = fopen("./primes.txt", "r");
 
-  mpz_t p_1, p_2;
-  mpz_inits(p_1, p_2, 0);
+  mpz_t tmp;
+  mpz_init(tmp);
 
   while (fscanf(fp, "%llu", &a) > 0) {
     vec_uint64_insert(data.primes, a);
+    mpz_set_ui(tmp, a);
+    vec_mpz_insert(data.prime_product_tree, tmp);
   }
+
+  mpz_clear(tmp);
+
+  vec_mpz_product_tree(data.prime_product_tree);
 
   fclose(fp);
 

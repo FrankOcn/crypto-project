@@ -86,8 +86,10 @@ void eea_bounded_mpz( mpz_t beta, mpz_t p, mpz_t k, mpz_t l, mpz_t* tmp )
     mpz_set_ui( l, 0 );
     mpz_set_ui( tmp[0], 1 );
 
+    size_t target = mpz_sizeinbase( beta, 2 ) / 2;
+
     // while ( mpz_cmp( beta, SQRT_P ) > 0 )
-    while ( mpz_sizeinbase( beta, 2 ) > 101 )
+    while ( mpz_sizeinbase( beta, 2 ) > target )
     {
         // tmp[3] = k / beta;
         // tmp[4] = k % beta;
