@@ -11,7 +11,7 @@
 struct shared_data {
   mpz_t modulus;
   mpz_t base;
-  struct vec_uint64_t* primes;
+  struct vec_mpz_t* primes;
   struct vec_mpz_t* prime_product_tree;
 };
 
@@ -36,7 +36,7 @@ int main(int argc, char ** argv) {
 
   printf("Loading prime factor base\n");
 
-  data.primes = vec_uint64_init();
+  data.primes = vec_mpz_init();
   data.prime_product_tree = vec_mpz_init();
 
   mpz_init(data.modulus);
@@ -59,14 +59,14 @@ int main(int argc, char ** argv) {
   mpz_init(tmp);
 
   while (fscanf(fp, "%llu", &a) > 0) {
-    vec_uint64_insert(data.primes, a);
     mpz_set_ui(tmp, a);
-    vec_mpz_insert(data.prime_product_tree, tmp);
+    vec_mpz_insert(data.primes, tmp);
   }
 
   mpz_clear(tmp);
 
-  vec_mpz_product_tree(data.prime_product_tree);
+  data.prime_product_tree = vec_mpz_product_tree(data.primes);
+
 
   fclose(fp);
 
@@ -89,7 +89,7 @@ int main(int argc, char ** argv) {
   }
   mpz_clear(data.modulus);
   mpz_clear(data.base);
-  vec_uint64_free(data.primes);
+  vec_mpz_free(data.primes);
 }
 
 void *find_smooth_function( void *ptr ) {
@@ -103,7 +103,8 @@ void *find_smooth_function( void *ptr ) {
   gmp_randinit_mt(rand_state);
   gmp_randseed_ui(rand_state, pthread_self());
 
-  uint64_t largest = data->primes->elems[data->primes->size - 1];
+  mpz_t largest_prime;
+  mpz_init_set(largest_prime, data->primes->elems[0]);
 
   // Initialize some test mpz_t for temp use in crypto util functions.
   struct vec_mpz_t* tmp = vec_mpz_init();
@@ -122,10 +123,10 @@ void *find_smooth_function( void *ptr ) {
 
   smoothFile = fopen(filename, "w+");
 
-  uint64_t *primes = data->primes->elems;
+  mpz_t *primes = data->primes->elems;
   int number_of_primes = data->primes->size;
-  uint64_t largest_prime = data->primes->elems[data->primes->size - 1];
-  uint64_t prime;
+  mpz_t prime;
+  mpz_init(prime);
   start = clock();
 
 
@@ -147,15 +148,15 @@ void *find_smooth_function( void *ptr ) {
     mpz_set(pollard_num, test_num_r);
 
     for (i = 0; i < 100; ++i) {
-      prime = primes[i];
-      while (mpz_divisible_ui_p(pollard_num, prime) != 0) {
-        mpz_divexact_ui(pollard_num, pollard_num, prime);
+      mpz_set(prime, primes[i]);
+      while (mpz_divisible_p(pollard_num, prime) != 0) {
+        mpz_divexact(pollard_num, pollard_num, prime);
       }
     }
 
     failed = 0;
 
-    while (failed == 0 && mpz_cmp_ui(pollard_num, largest_prime) > 0) {
+    while (failed == 0 && mpz_cmp(pollard_num, largest_prime) > 0) {
       if (pollard_rho(pollard_factor, pollard_num, 6000, tmp->elems) == 1) {
         mpz_divexact(pollard_num, pollard_num, pollard_factor);
       } else {
@@ -169,25 +170,27 @@ void *find_smooth_function( void *ptr ) {
     }
 
     mpz_set(factor_num, test_num_r);
-    struct vec_uint64_t *factors = vec_uint64_init();
+    struct vec_mpz_t *factors = vec_mpz_init();
     struct vec_uint64_t *powers = vec_uint64_init();
     int power;
 
     for (i = 0; i < number_of_primes; i++) {
       power = 0;
-      prime = primes[i];
-      while (mpz_divisible_ui_p(factor_num, prime) != 0) {
-        mpz_divexact_ui(factor_num, factor_num, prime);
+      mpz_set(prime, primes[i]);
+      while (mpz_divisible_p(factor_num, prime) != 0) {
+        mpz_divexact(factor_num, factor_num, prime);
         power += 1;
       }
       if (power != 0) {
-        vec_uint64_insert(factors, prime);
+        vec_mpz_insert(factors, prime);
         vec_uint64_insert(powers, power);
       }
     }
 
     if (mpz_cmp_ui(factor_num, 1) != 0) {
       attempts += 1;
+      vec_mpz_free(factors);
+      vec_uint64_free(powers);
       continue;
     }
 
@@ -197,14 +200,14 @@ void *find_smooth_function( void *ptr ) {
     mpz_set(pollard_num, test_num_s);
 
     for (i = 0; i < 150; ++i) {
-      prime = primes[i];
-      while (mpz_divisible_ui_p(pollard_num, prime) != 0) {
-        mpz_divexact_ui(pollard_num, pollard_num, prime);
+      mpz_set(prime, primes[i]);
+      while (mpz_divisible_p(pollard_num, prime) != 0) {
+        mpz_divexact(pollard_num, pollard_num, prime);
       }
     }
 
     failed = 0;
-    while (failed == 0 && mpz_cmp_ui(pollard_num, largest_prime) > 0) {
+    while (failed == 0 && mpz_cmp(pollard_num, largest_prime) > 0) {
       if (pollard_rho(pollard_factor, pollard_num, 6000, tmp->elems) == 1) {
         mpz_divexact(pollard_num, pollard_num, pollard_factor);
       } else {
@@ -213,6 +216,8 @@ void *find_smooth_function( void *ptr ) {
     }
 
     if (failed == 1) {
+      vec_mpz_free(factors);
+      vec_uint64_free(powers);
       attempts += 1;
       continue;
     }
@@ -221,13 +226,13 @@ void *find_smooth_function( void *ptr ) {
 
     for (i = 0; i < number_of_primes; i++) {
       power = 0;
-      prime = primes[i];
-      while (mpz_divisible_ui_p(factor_num, prime) != 0) {
-        mpz_divexact_ui(factor_num, factor_num, prime);
+      mpz_set(prime, primes[i]);
+      while (mpz_divisible_p(factor_num, prime) != 0) {
+        mpz_divexact(factor_num, factor_num, prime);
         power += 1;
       }
       if (power != 0) {
-        vec_uint64_insert(factors, prime);
+        vec_mpz_insert(factors, prime);
         vec_uint64_insert(powers, power);
       }
     }
@@ -248,7 +253,7 @@ void *find_smooth_function( void *ptr ) {
       fflush(smoothFile);
     }
 
-    vec_uint64_free(factors);
+    vec_mpz_free(factors);
     vec_uint64_free(powers);
     attempts += 1;
   }
