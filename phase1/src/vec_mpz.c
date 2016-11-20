@@ -20,8 +20,7 @@ void vec_mpz_insert(struct vec_mpz_t* vec, mpz_t elem) {
     vec->capacity = vec->capacity * 2;
     mpz_t* elems = (mpz_t *)malloc(vec->capacity * sizeof(mpz_t));
     for (i = 0; i < vec->size; ++i) {
-      mpz_init(elems[i]);
-      mpz_set(elems[i], vec->elems[i]);
+      mpz_init_set(elems[i], vec->elems[i]);
       mpz_clear(vec->elems[i]);
     }
     free(vec->elems);
