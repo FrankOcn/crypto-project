@@ -7,6 +7,7 @@
 #include "vec_mpz.h"
 #include "vec_uint64.h"
 #include "crypto_utils.h"
+#include "hashtable_int64.h"
 
 struct shared_data {
   mpz_t modulus;
@@ -49,7 +50,7 @@ int main(int argc, char ** argv) {
   mpz_init(data.base);
   mpz_set_str(
     data.base,
-    "1483470583978676987274572113759546747043713044116589831659689",
+    "983323641496181394191925968825033998345778072524604244950047",
     10
   );
 
@@ -143,7 +144,6 @@ void *find_smooth_function( void *ptr ) {
     }
 
     eea_bounded_mpz( test_num, data->modulus, test_num_r, test_num_s, tmp->elems);
-    mpz_abs(test_num_s, test_num_s);
 
     mpz_set(pollard_num, test_num_r);
 
@@ -170,8 +170,7 @@ void *find_smooth_function( void *ptr ) {
     }
 
     mpz_set(factor_num, test_num_r);
-    struct vec_mpz_t *factors = vec_mpz_init();
-    struct vec_uint64_t *powers = vec_uint64_init();
+    struct hashtable_int64_t *table = hashtable_int64_init();
     int power;
 
     for (i = 0; i < number_of_primes; i++) {
@@ -182,15 +181,13 @@ void *find_smooth_function( void *ptr ) {
         power += 1;
       }
       if (power != 0) {
-        vec_mpz_insert(factors, prime);
-        vec_uint64_insert(powers, power);
+        hashtable_int64_insert(table, mpz_get_ui(prime), power);
       }
     }
 
     if (mpz_cmp_ui(factor_num, 1) != 0) {
       attempts += 1;
-      vec_mpz_free(factors);
-      vec_uint64_free(powers);
+      hashtable_int64_free(table);
       continue;
     }
 
@@ -216,13 +213,17 @@ void *find_smooth_function( void *ptr ) {
     }
 
     if (failed == 1) {
-      vec_mpz_free(factors);
-      vec_uint64_free(powers);
+      hashtable_int64_free(table);
       attempts += 1;
       continue;
     }
 
     mpz_set(factor_num, test_num_s);
+
+    if (mpz_sgn(factor_num) < 0) {
+      hashtable_int64_insert(table, -1, 1);
+      mpz_abs(factor_num, factor_num);
+    }
 
     for (i = 0; i < number_of_primes; i++) {
       power = 0;
@@ -232,8 +233,12 @@ void *find_smooth_function( void *ptr ) {
         power += 1;
       }
       if (power != 0) {
-        vec_mpz_insert(factors, prime);
-        vec_uint64_insert(powers, power);
+        int64_t *saved = hashtable_int64_retrieve(table, mpz_get_ui(prime));
+        if (saved == 0) {
+          hashtable_int64_insert(table, mpz_get_ui(prime), -power);
+        } else {
+          *saved = *saved - power;
+        }
       }
     }
 
@@ -245,16 +250,17 @@ void *find_smooth_function( void *ptr ) {
 
       fprintf(smoothFile, "%s:", powStr);
 
-      for (i = 0; i < factors->size; ++i) {
-        fprintf(smoothFile, "(%lu, %lu)", factors->elems[i], powers->elems[i]);
+      for (i = 0; i < table->capacity; ++i) {
+        if (table->elems[i] != 0) {
+          fprintf(smoothFile, "(%d, %d)", table->elems[i]->key, table->elems[i]->value);
+        }
       }
 
       fprintf(smoothFile, "\n");
       fflush(smoothFile);
     }
 
-    vec_mpz_free(factors);
-    vec_uint64_free(powers);
+    hashtable_int64_free(table);
     attempts += 1;
   }
 
