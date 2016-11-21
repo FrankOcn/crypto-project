@@ -145,19 +145,62 @@ void *find_smooth_function( void *ptr ) {
 
     eea_bounded_mpz( test_num, data->modulus, test_num_r, test_num_s, tmp->elems);
 
+    mpz_set(pollard_num, test_num_s);
+    if (mpz_sgn(pollard_num) < 0) {
+      mpz_abs(pollard_num, pollard_num);
+    }
+    if (
+      miller_rabin(test_num_r, 10, rand_state, tmp->elems) == 1 ||
+      miller_rabin(pollard_num, 10, rand_state, tmp->elems) == 1
+    ) {
+      attempts += 1;
+      continue;
+    }
+
     mpz_set(pollard_num, test_num_r);
 
-    for (i = 0; i < 100; ++i) {
+    /*for (i = 0; i < 150; ++i) {
       mpz_set(prime, primes[i]);
       while (mpz_divisible_p(pollard_num, prime) != 0) {
         mpz_divexact(pollard_num, pollard_num, prime);
       }
-    }
+    }*/
 
     failed = 0;
 
     while (failed == 0 && mpz_cmp(pollard_num, largest_prime) > 0) {
-      if (pollard_rho(pollard_factor, pollard_num, 6000, tmp->elems) == 1) {
+      if (pollard_rho(pollard_factor, pollard_num, 4000, tmp->elems) == 1) {
+        mpz_divexact(pollard_num, pollard_num, pollard_factor);
+        if (mpz_cmp(pollard_num, largest_prime) > 0 && miller_rabin(pollard_num, 10, rand_state, tmp->elems) == 1) {
+          failed = 1;
+        }
+      } else {
+        failed = 1;
+      }
+    }
+
+    if (failed == 1) {
+      attempts += 1;
+      continue;
+    }
+
+    gmp_printf("Passed (r): %Zd\n", test_num_r);
+    gmp_printf("Testing (s): %Zd\n", test_num_s);
+
+    mpz_set(pollard_num, test_num_s);
+    if (mpz_sgn(pollard_num) < 0) {
+      mpz_abs(pollard_num, pollard_num);
+    }
+    /*for (i = 0; i < 150; ++i) {
+      mpz_set(prime, primes[i]);
+      while (mpz_divisible_p(pollard_num, prime) != 0) {
+        mpz_divexact(pollard_num, pollard_num, prime);
+      }
+    }*/
+
+    failed = 0;
+    while (failed == 0 && mpz_cmp(pollard_num, largest_prime) > 0) {
+      if (pollard_rho(pollard_factor, pollard_num, 4000, tmp->elems) == 1) {
         mpz_divexact(pollard_num, pollard_num, pollard_factor);
       } else {
         failed = 1;
@@ -169,6 +212,7 @@ void *find_smooth_function( void *ptr ) {
       continue;
     }
 
+    gmp_printf("Attempting\n");
     mpz_set(factor_num, test_num_r);
     struct hashtable_int64_t *table = hashtable_int64_init();
     int power;
@@ -192,32 +236,6 @@ void *find_smooth_function( void *ptr ) {
     }
 
     gmp_printf("Fully factored (r): %Zd\n", test_num_r);
-    gmp_printf("Testing (s): %Zd\n", test_num_s);
-
-    mpz_set(pollard_num, test_num_s);
-
-    for (i = 0; i < 150; ++i) {
-      mpz_set(prime, primes[i]);
-      while (mpz_divisible_p(pollard_num, prime) != 0) {
-        mpz_divexact(pollard_num, pollard_num, prime);
-      }
-    }
-
-    failed = 0;
-    while (failed == 0 && mpz_cmp(pollard_num, largest_prime) > 0) {
-      if (pollard_rho(pollard_factor, pollard_num, 6000, tmp->elems) == 1) {
-        mpz_divexact(pollard_num, pollard_num, pollard_factor);
-      } else {
-        failed = 1;
-      }
-    }
-
-    if (failed == 1) {
-      hashtable_int64_free(table);
-      attempts += 1;
-      continue;
-    }
-
     mpz_set(factor_num, test_num_s);
 
     if (mpz_sgn(factor_num) < 0) {
@@ -244,6 +262,7 @@ void *find_smooth_function( void *ptr ) {
 
     if (mpz_cmp_ui(factor_num, 1) == 0) {
       gmp_printf("Fully factored (s): %Zd\n", test_num_s);
+      printf("------------------FUCK YES----------------\n");
       char powStr[100];
 
       mpz_get_str(powStr, 10, pow);

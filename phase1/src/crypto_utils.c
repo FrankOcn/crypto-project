@@ -53,18 +53,23 @@ int miller_rabin(mpz_t n, size_t limit, gmp_randstate_t rand_state, mpz_t* tmp )
 }
 
 int pollard_rho(mpz_t d, mpz_t n, size_t limit, mpz_t* tmp ) {
-  int i;
+  int i, steps_taken = 0, step_limit = 2;
   mpz_set_ui(tmp[0], 2);
   mpz_set_ui(tmp[1], 2);
   mpz_set_ui(d, 1);
-  for (i = 0; i < limit && mpz_cmp_ui(d, 1) == 0; ++i) {
-    mpz_powm_ui(tmp[0], tmp[0], 2, n);
-    mpz_powm_ui(tmp[1], tmp[1], 4, n);
+  for (i = 0; i < limit && mpz_cmp_ui(d, 1) == 0; ++steps_taken, ++i) {
+    if (steps_taken == step_limit) {
+      step_limit *= 2;
+      mpz_set(tmp[0], tmp[1]);
+    }
+    mpz_powm_ui(tmp[1], tmp[1], 2, n);
+    mpz_add_ui(tmp[1], tmp[1], 1);
     mpz_sub(tmp[2], tmp[0], tmp[1]);
     mpz_abs(tmp[2], tmp[2]);
 
     mpz_gcd(d, tmp[2], n);
   }
+
   return i == limit ? -1 : 1;
 }
 
