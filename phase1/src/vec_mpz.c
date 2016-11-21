@@ -156,3 +156,36 @@ struct vec_mpz_t* compute_smooth_parts(struct vec_mpz_t* batch, struct vec_mpz_t
   }
   return smooth_parts;
 }
+
+int* smooth_check(struct vec_mpz_t* smooth_parts)
+{
+  const unsigned int BATCH_SIZE = smooth_parts->size;
+  mpz_t p, remainder;
+  mpz_init(p);
+  mpz_init(remainder);
+  mpz_set_str(p, "7368787", 10);
+  int* smooth_bools = malloc(sizeof(int) * BATCH_SIZE);
+
+  for (int i = 0; i < BATCH_SIZE; i++)
+  {
+    // smooth part of number smaller than largest prime, cannot be p-smooth
+    if ( mpz_cmp(smooth_parts->elems[i], p) < 0 )
+    {
+      smooth_bools[i] = 0;
+      continue;
+    }
+
+    mpz_mod(remainder, smooth_parts->elems[i], p);
+    // candidate divided by p cleanly, is at least p-smooth 
+    if ( mpz_cmp_ui(remainder, 0 ) == 0)
+    {
+      smooth_bools[i] = 1;
+    }
+    else
+    {
+      smooth_bools[i] = 0;
+    }
+  }
+
+  return smooth_bools;
+}

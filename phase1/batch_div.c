@@ -23,9 +23,10 @@ int main(int argc, char ** argv)
   struct vec_mpz_t* primes_remainder_tree;
   struct vec_mpz_t* remainders;
   struct vec_mpz_t* smooth_parts = vec_mpz_init_size(BATCH_SIZE);
+  int* smooth_bools;
 
   FILE *fp;
-  fp = fopen("./primes_16.txt", "r");
+  fp = fopen("./primes.txt", "r");
   while (mpz_inp_str(a, fp, 10))
   {
     vec_mpz_insert(primes, a);
@@ -48,6 +49,7 @@ int main(int argc, char ** argv)
 
   smooth_parts = compute_smooth_parts(batch, squares);
 
+  /*
   printf("THE SMOOTH PARTS OF:\n");
   for (i = 0; i < BATCH_SIZE; i++)
   {
@@ -59,10 +61,13 @@ int main(int argc, char ** argv)
     gmp_printf("%Zd | ", primes->elems[i]);
   }
   printf("\n ARE:\n");
+  */
+  smooth_bools = smooth_check(smooth_parts);
   for (i = 0; i < BATCH_SIZE; i++)
   {
-    gmp_printf("%Zd\n", smooth_parts->elems[i]);
+    gmp_printf("%Zd | %d\n", batch->elems[i], smooth_bools[i]);
   }
+
   printf("\n");
 
   vec_mpz_free(batch);
