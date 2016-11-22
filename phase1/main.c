@@ -105,7 +105,7 @@ void *find_smooth_function( void *ptr ) {
   gmp_randseed_ui(rand_state, pthread_self());
 
   mpz_t largest_prime;
-  mpz_init_set(largest_prime, data->primes->elems[0]);
+  mpz_init_set(largest_prime, data->primes->elems[data->primes->size - 1]);
 
   // Initialize some test mpz_t for temp use in crypto util functions.
   struct vec_mpz_t* tmp = vec_mpz_init();
@@ -169,9 +169,13 @@ void *find_smooth_function( void *ptr ) {
     failed = 0;
 
     while (failed == 0 && mpz_cmp(pollard_num, largest_prime) > 0) {
-      if (pollard_rho(pollard_factor, pollard_num, 4000, tmp->elems) == 1) {
-        mpz_divexact(pollard_num, pollard_num, pollard_factor);
-        if (mpz_cmp(pollard_num, largest_prime) > 0 && miller_rabin(pollard_num, 10, rand_state, tmp->elems) == 1) {
+      if (pollard_rho(pollard_factor, pollard_num, 10000, tmp->elems) == 1) {
+        if (mpz_cmp(pollard_factor, largest_prime) > 0 && miller_rabin(pollard_factor, 10, rand_state, tmp->elems) == 1) {
+          failed = 1;
+        } else {
+          mpz_divexact(pollard_num, pollard_num, pollard_factor);
+        }
+      if (failed == 0 && mpz_cmp(pollard_num, largest_prime) > 0 && miller_rabin(pollard_num, 10, rand_state, tmp->elems) == 1) {
           failed = 1;
         }
       } else {
@@ -200,8 +204,15 @@ void *find_smooth_function( void *ptr ) {
 
     failed = 0;
     while (failed == 0 && mpz_cmp(pollard_num, largest_prime) > 0) {
-      if (pollard_rho(pollard_factor, pollard_num, 4000, tmp->elems) == 1) {
-        mpz_divexact(pollard_num, pollard_num, pollard_factor);
+      if (pollard_rho(pollard_factor, pollard_num, 10000, tmp->elems) == 1) {
+        if (mpz_cmp(pollard_factor, largest_prime) > 0 && miller_rabin(pollard_factor, 100, rand_state, tmp->elems) == 1) {
+          failed = 1;
+        } else {
+          mpz_divexact(pollard_num, pollard_num, pollard_factor);
+        }
+      if (failed == 0 && mpz_cmp(pollard_num, largest_prime) > 0 && miller_rabin(pollard_num, 100, rand_state, tmp->elems) == 1) {
+          failed = 1;
+        }
       } else {
         failed = 1;
       }
@@ -239,7 +250,7 @@ void *find_smooth_function( void *ptr ) {
     mpz_set(factor_num, test_num_s);
 
     if (mpz_sgn(factor_num) < 0) {
-      hashtable_int64_insert(table, -1, 1);
+      hashtable_int64_insert(table, -1, -1);
       mpz_abs(factor_num, factor_num);
     }
 
