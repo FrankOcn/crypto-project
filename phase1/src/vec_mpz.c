@@ -89,7 +89,7 @@ struct vec_mpz_t* vec_mpz_remainder_tree(mpz_t n, struct vec_mpz_t* vec)
 {
   int i;
   struct vec_mpz_t* remainder_tree = vec_mpz_init_size(vec->size);
-  
+
   // gmp_printf("%Zd mod %Zd\n", n, vec->elems[0]);
   mpz_mod(remainder_tree->elems[0], n, vec->elems[0]);
   for (i = 1; i < remainder_tree->size; i++)
@@ -141,6 +141,8 @@ struct vec_mpz_t* compute_squares(struct vec_mpz_t* remainders, struct vec_mpz_t
     mpz_powm_ui(temp, remainders->elems[i], two_sq, batch->elems[i]);
     vec_mpz_insert(squares, temp);
   }
+  mpz_clear(temp);
+  mpz_clear(two_sq_sq);
 
   return squares;
 }
@@ -154,17 +156,32 @@ struct vec_mpz_t* compute_smooth_parts(struct vec_mpz_t* batch, struct vec_mpz_t
   {
     mpz_gcd(smooth_parts->elems[i], batch->elems[i], squares->elems[i]);
   }
+  mpz_clear(temp);
+
   return smooth_parts;
 }
 
-int* smooth_check(struct vec_mpz_t* smooth_parts)
+int* batch_smooth_parts(struct vec_mpz_t* factor_base, struct vec_mpz_t* batch)
 {
-  const unsigned int BATCH_SIZE = smooth_parts->size;
-  mpz_t p, remainder;
+  const unsigned int BATCH_SIZE = batch->size;
+  struct vec_mpz_t* primes_product_tree;
+  struct vec_mpz_t* batch_remainder_tree;
+  struct vec_mpz_t* batch_remainders;
+  struct vec_mpz_t* squares;
+  struct vec_mpz_t* smooth_parts;
+  mpz_t z, p, remainder;
+  mpz_init(z);
   mpz_init(p);
   mpz_init(remainder);
-  mpz_set_str(p, "7368787", 10);
-  int* smooth_bools = malloc(sizeof(int) * BATCH_SIZE);
+  mpz_set_str(p, "7368787", 10); // p = largest prime in our factor base
+  int *smooth_bools = malloc(sizeof(int) * BATCH_SIZE);
+
+  primes_product_tree = vec_mpz_product_tree(factor_base);
+  mpz_set(z, primes_product_tree->elems[0]);
+  batch_remainder_tree = vec_mpz_remainder_tree(z, batch);
+  batch_remainders = remainders_in(batch_remainder_tree, BATCH_SIZE);
+  squares = compute_squares(batch_remainders, batch);
+  smooth_parts = compute_smooth_parts(batch, squares);
 
   for (int i = 0; i < BATCH_SIZE; i++)
   {
@@ -186,6 +203,14 @@ int* smooth_check(struct vec_mpz_t* smooth_parts)
       smooth_bools[i] = 0;
     }
   }
+  mpz_clear(z);
+  mpz_clear(p);
+  mpz_clear(remainder);
+  vec_mpz_free(primes_product_tree);
+  vec_mpz_free(batch_remainder_tree);
+  vec_mpz_free(batch_remainders);
+  vec_mpz_free(squares);
+  vec_mpz_free(smooth_parts);
 
   return smooth_bools;
 }

@@ -293,6 +293,4 @@ void *find_smooth_function( void *ptr ) {
     hashtable_int64_free(table);
     attempts += 1;
   }
-
-
 }
