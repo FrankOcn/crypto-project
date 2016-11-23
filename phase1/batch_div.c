@@ -40,6 +40,7 @@ int main(int argc, char ** argv)
   struct vec_mpz_t* temp = vec_mpz_init();
   struct vec_mpz_t* r_batch = vec_mpz_init_size(BATCH_SIZE); // r values
   struct vec_mpz_t* s_batch = vec_mpz_init_size(BATCH_SIZE); // s values
+  struct vec_mpz_t* pow_batch = vec_mpz_init_size(BATCH_SIZE);
   primes = vec_mpz_init(); // primes in factor base
   int* r_smooth_bools;
   int* s_smooth_bools;
@@ -69,6 +70,7 @@ int main(int argc, char ** argv)
   {
     r_batch->size = 0;
     s_batch->size = 0;
+    pow_batch->size = 0;
 
     for (i = 0; i < BATCH_SIZE; i++)
     {
@@ -77,6 +79,7 @@ int main(int argc, char ** argv)
       eea_bounded_mpz(test_num, modulus, test_num_r, test_num_s, temp->elems);
       mpz_swap(r_batch->elems[i], test_num_r);
       mpz_swap(s_batch->elems[i], test_num_s);
+      mpz_swap(pow_batch->elems[i], pow);
     }
     r_smooth_bools = batch_smooth_parts(z, primes_product_tree, r_batch, BATCH_SIZE); 
 
@@ -90,10 +93,13 @@ int main(int argc, char ** argv)
         {
           char r_val[100];
           char s_val[100];
+          char pow_val[100];
           mpz_get_str(r_val, 10, r_batch->elems[i]);
           mpz_get_str(s_val, 10, s_batch-> elems[i]);
+          mpz_get_str(pow_val, 10, pow_batch->elems[i]);
           fprintf(output, "%s:", r_val);
           fprintf(output, "%s:", s_val);
+          fprintf(output, "%s:", pow_val);
           fprintf(output, "\n");
         }
       }
