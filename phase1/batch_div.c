@@ -53,6 +53,8 @@ int main(int argc, char ** argv)
  
 
   FILE *fp;
+  FILE *output;
+  output = fopen("./output.txt", "w+");
   fp = fopen("./primes.txt", "r");
   while (mpz_inp_str(a, fp, 10))
   {
@@ -80,12 +82,20 @@ int main(int argc, char ** argv)
 
     for (i = 0; i < BATCH_SIZE; i++)
     {
-      gmp_printf("Testing r value: %Zd\n", r_batch->elems[i]);
       if (r_smooth_bools[i] != 0)
       {
-        printf("-- SMOOTH NUMBER FOUND --\n");
-        gmp_printf("%r value: Zd\n", r_batch->elems[i]);
-        NO_SMOOTH_FOUND = 0;
+        s_smooth_bools = batch_smooth_parts(z, primes_product_tree, s_batch, BATCH_SIZE);
+        // both r and s values are smooth
+        if (s_smooth_bools[i] != 0)
+        {
+          char r_val[100];
+          char s_val[100];
+          mpz_get_str(r_val, 10, r_batch->elems[i]);
+          mpz_get_str(s_val, 10, s_batch-> elems[i]);
+          fprintf(output, "%s:", r_val);
+          fprintf(output, "%s:", s_val);
+          fprintf(output, "\n");
+        }
       }
     }
   }
