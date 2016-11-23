@@ -161,23 +161,18 @@ struct vec_mpz_t* compute_smooth_parts(struct vec_mpz_t* batch, struct vec_mpz_t
   return smooth_parts;
 }
 
-int* batch_smooth_parts(struct vec_mpz_t* factor_base, struct vec_mpz_t* batch)
+int* batch_smooth_parts(mpz_t z, struct vec_mpz_t* primes_product_tree, struct vec_mpz_t* batch, const unsigned int BATCH_SIZE)
 {
-  const unsigned int BATCH_SIZE = batch->size;
-  struct vec_mpz_t* primes_product_tree;
   struct vec_mpz_t* batch_remainder_tree;
   struct vec_mpz_t* batch_remainders;
   struct vec_mpz_t* squares;
   struct vec_mpz_t* smooth_parts;
-  mpz_t z, p, remainder;
-  mpz_init(z);
+  mpz_t p, remainder;
   mpz_init(p);
   mpz_init(remainder);
   mpz_set_str(p, "7368787", 10); // p = largest prime in our factor base
   int *smooth_bools = malloc(sizeof(int) * BATCH_SIZE);
 
-  primes_product_tree = vec_mpz_product_tree(factor_base);
-  mpz_set(z, primes_product_tree->elems[0]);
   batch_remainder_tree = vec_mpz_remainder_tree(z, batch);
   batch_remainders = remainders_in(batch_remainder_tree, BATCH_SIZE);
   squares = compute_squares(batch_remainders, batch);
@@ -185,6 +180,7 @@ int* batch_smooth_parts(struct vec_mpz_t* factor_base, struct vec_mpz_t* batch)
 
   for (int i = 0; i < BATCH_SIZE; i++)
   {
+    printf("iteration: %d\n", i);
     // smooth part of number smaller than largest prime, cannot be p-smooth
     if ( mpz_cmp(smooth_parts->elems[i], p) < 0 )
     {
@@ -203,10 +199,8 @@ int* batch_smooth_parts(struct vec_mpz_t* factor_base, struct vec_mpz_t* batch)
       smooth_bools[i] = 0;
     }
   }
-  mpz_clear(z);
   mpz_clear(p);
   mpz_clear(remainder);
-  vec_mpz_free(primes_product_tree);
   vec_mpz_free(batch_remainder_tree);
   vec_mpz_free(batch_remainders);
   vec_mpz_free(squares);

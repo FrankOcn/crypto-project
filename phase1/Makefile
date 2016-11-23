@@ -15,7 +15,7 @@ OBJ=$(SRC:.c=.o)
 	if [ ! -d $(OBJ_DIR) ]; then mkdir $(OBJ_DIR); fi; $(CC) -c $(CCFLAGS) $< -o $(OBJ_DIR)/$@
 
 main: $(OBJ)
-	if [ ! -d $(BIN_DIR) ]; then mkdir $(BIN_DIR); fi; $(CC) $(addprefix $(OBJ_DIR)/,$(OBJ)) main.c $(CCFLAGS) -o $(BIN_DIR)/$@
+	if [ ! -d $(BIN_DIR) ]; then mkdir $(BIN_DIR); fi; $(CC) $(addprefix $(OBJ_DIR)/,$(OBJ)) batch_div.c $(CCFLAGS) -o $(BIN_DIR)/$@
 
 docs:
 	doxygen;
