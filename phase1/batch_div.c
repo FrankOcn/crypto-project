@@ -101,6 +101,7 @@ int main(int argc, char ** argv)
           fprintf(output, "%s:", s_val);
           fprintf(output, "%s:", pow_val);
           fprintf(output, "\n");
+          printf("--- !!!FOUND ONE!!! ---\n");
         }
       }
     }
