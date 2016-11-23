@@ -57,6 +57,7 @@ int pollard_rho(mpz_t d, mpz_t n, size_t limit, mpz_t* tmp ) {
   mpz_set_ui(tmp[0], 2);
   mpz_set_ui(tmp[1], 2);
   mpz_set_ui(d, 1);
+  mpz_set_ui(tmp[3], 1);
   for (i = 0; i < limit && mpz_cmp_ui(d, 1) == 0; ++steps_taken, ++i) {
     if (steps_taken == step_limit) {
       step_limit *= 2;
@@ -66,8 +67,11 @@ int pollard_rho(mpz_t d, mpz_t n, size_t limit, mpz_t* tmp ) {
     mpz_add_ui(tmp[1], tmp[1], 1);
     mpz_sub(tmp[2], tmp[0], tmp[1]);
     mpz_abs(tmp[2], tmp[2]);
-
-    mpz_gcd(d, tmp[2], n);
+    mpz_mul(tmp[3], tmp[3], tmp[2]);
+    if ((i+1)%15 == 0) {
+      mpz_gcd(d, tmp[3], n);
+      mpz_set_ui(tmp[3], 1);
+    }
   }
 
   return i == limit ? -1 : 1;
