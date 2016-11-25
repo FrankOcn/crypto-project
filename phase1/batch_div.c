@@ -28,6 +28,7 @@ int main(int argc, char ** argv)
   int NO_SMOOTH_FOUND = 1;
 
   clock_t start, diff;
+  unsigned long msec;
 
   // data stuff
   mpz_t modulus, base, z;
@@ -49,14 +50,14 @@ int main(int argc, char ** argv)
   gmp_randinit_mt(rand_state);
   gmp_randseed_ui(rand_state, (int)time(NULL));
 
-  mpz_set_str(base, "983323641496181394191925968825033998345778072524604244950047", 10);
+  mpz_set_str(base, "2233690997702420376898541331161315870090615501504568211724152", 10);
   mpz_set_str(modulus, "3217014639198601771090467299986349868436393574029172456674199", 10);
  
 
   FILE *fp;
   FILE *output;
   output = fopen("./output.txt", "w+");
-  fp = fopen("./primes.txt", "r");
+  fp = fopen("./primes_80k.txt", "r");
   while (mpz_inp_str(a, fp, 10))
   {
     vec_mpz_insert(primes, a);
@@ -66,6 +67,8 @@ int main(int argc, char ** argv)
   primes_product_tree = vec_mpz_product_tree(primes);
   mpz_set(z, primes_product_tree->elems[0]);
 
+  printf("Starting process.. \n");
+  start = clock();
   while (NO_SMOOTH_FOUND)
   {
     r_batch->size = 0;
@@ -102,6 +105,10 @@ int main(int argc, char ** argv)
           fprintf(output, "%s:", pow_val);
           fprintf(output, "\n");
           printf("--- !!!FOUND ONE!!! ---\n");
+          diff = clock() - start;
+          msec = diff * 1000 / CLOCKS_PER_SEC; 
+          printf("--- !!!FOUND ONE!!! ---\n");
+          printf("--- %lu seconds ---\n", msec);
         }
       }
     }
