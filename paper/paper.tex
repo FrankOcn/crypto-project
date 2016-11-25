@@ -2,6 +2,8 @@
 \usepackage[american]{babel}
 \usepackage{csquotes}
 \usepackage[backend=biber,bibstyle=mla]{biblatex}
+\usepackage{mathtools}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
 \addbibresource{references.bib}
 \author{Cristian Vergara}
 \title{Breaking Diffie-Hellman}
@@ -10,8 +12,47 @@
   \maketitle{}
   \tableofcontents{}
   \newpage{}
-  \section{hello}
-    Wel wel wel \autocite{handbook}
+  \section{The Problem}
+    \begin{displayquote}
+      Two persons (no doubt evil) are employing a Diffie-Hellman scheme to fix
+      up a session key for their (no doubt evil) communications. They are
+      using a prime modulus of
+
+          3217014639198601771090467299986349868436393574029172456674199
+
+          and a base value of  5.
+
+          Your operatives report that they have witnessed the Diffie-Hellman
+      exhanges of the following information
+
+          244241057144443665472449725715508406620552440771362355600491
+
+          and
+
+          794175985233932171488379184551301257494458499937502344155004.
+
+          Find the shared secret key.
+
+      Good luck - and have fun,
+
+      KDB
+    \end{displayquote}
+    \subsection{A few immediate obersations}
+      The prime modulus $p$ given to use is a 202-bit number, or 61 digits in
+      base 10.
+
+      We are given two values: $g^x$ and $g^y$, and we're asked to find
+      $g^{xy}$. This means that we only need to solve for either $x$ or $y$,
+      because $(g^x)^y = (g^y)^x = g^{xy}$.
+
+      There's a lot more to be said about this problem, but the discoveries that
+      we made will be explained where appropriate.
+  \section{Baby-Step Giant-Step}
+    The Baby-Step Giant-Step algorithm is a meet-in-the-middle attack on the
+    discrete log problem.
+
+    Given $g$, $b$ and $p$, we want to find $x$ in $g^x \equiv b \pmod{p}$.
+    Instead, we express $x$ as $im + j$ with $m = \ceil{\sqrt{n}}$.
   \newpage{}
   \printbibliography
 \end{document}
