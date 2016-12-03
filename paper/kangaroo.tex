@@ -1,0 +1,66 @@
+\documentclass{article}
+
+\title{Pollard's Kangaroo Method}
+
+\begin{document}
+    \maketitle
+
+    The Kangaroo method (referred to by some as $\lambda$ method) for computing discrete logarithms was introduced by J.M.Pollard in 1978 along with his $\rho$ method [1]. The method is probabilistic, and its key component closely resembles Kruskal's "card trick" [2]. It is also easy to parallelize, and is particularly effective if, given the standard DLP setup $g^x \equiv \beta \pmod{p}$ the the exponent $x$ is known to lie in a certain range $a \leq x \leq b$.
+
+    The general idea of the method (and the reason why it is named after the animal) is to let two Kangaroos -- a wild one and a tame one -- travel on their own until their paths cross and they fall into the same trap.
+
+    Converting the analogy into mathematical terms, this is how the method works:
+    \begin{enumerate}
+        \item Let $G$ be the set of unique elements $G_i \equiv g^i \pmod{p}$.
+
+        \item Let $S$ be a set of integers $S = \{S_1, S_2, \ldots, S_k\}$.
+
+        This is a set of jumps that either of the Kangaroos may do on their path. Pollard performs some analysis in [1] and [3] to make a few recommendations regarding the set:
+
+        \begin{itemize}
+            \item The size of the set, $|S|$, should be significantly smaller than $\sqrt{|G|}$
+            \item The set's mean, $m$, should be approximately $\sqrt{|G|}$
+            \item The set may (and, more often than not, should) contain duplicates as long as its elements are in a non-decreasing order
+            \item The set's elements should be powers of 2 (which happen to be easy to generate).
+            \item The set need not be stored in memory -- each of the values can be calculated dynamically as long as they don't change.
+        \end{itemize}
+
+        \item Choose a hash function $H$. This function will provide a pseudorandom map $H : G \to S$.
+        The goal of using this hash function is to pick "random" jumps depending on the Kangaroo's position on the path. Even though not mentioned in Pollard's paper, it is easy to reason that the efficiency of $H$ is more important than its other qualities (such as "randomness"), because in practice it affects the runtime of the entire algorithm linearly (see below why).
+
+        \item Release the Tame kangaroo. Pick a number $N$ (which may be some multiple of $m$, as suggested by Pollard in [1]) and compute the sequence $\{x_0, x_1, \ldots, x_N\}$ using a recursive rule:
+
+        \begin{itemize}
+            \item $x_0 \equiv g^b \pmod{p}$ (where $b$ is the upper bound of the range in which we expect the exponent to lie)
+            \item $x_i \equiv x_{i-1} \times g^{h(x_{i-1})} \pmod{p}$
+        \end{itemize}
+
+        Observe:
+
+        $$x_N \equiv g^b \times g^{ h(x_0) } \times g^{ h(x_1) } \times \ldots \times g^{ h(x_{N-1}) } \equiv g^{ b + h(x_0) + h(x_1) + \ldots + h(x_{N-1}) }$$
+
+        Putting it into context, $x_N$ resembles the trap which we want the Wild kangaroo to fall into.
+
+        \item We now calculate $d$, which will stand for the distance travelled by the Tame kangaroo:
+
+        $$d = h(x_0) + h(x_1) + \ldots + h(x_{N-1}) = \sum_{i=0}^{N-1} h(x_i)$$
+
+        Observe that $x_N = g^{b+d}$ (in other words, the position of the Tame kangaroo is equivalent to its starting point $b$ plus the distance travelled $d$)
+
+        \item Release the Wild kangaroo. Begin computing the sequence $\{y_0, y_1, \ldots \}$ using a recursive rule similar to the one in step 3:
+        \begin{itemize}
+            \item $y_0 \equiv \beta \equiv a^x \pmod{p}$
+            \item $y_i \equiv y_{i-1} \times a^{h(y_i-1)} \pmod{p}$
+        \end{itemize}
+        Keep track of the Wild kangaroo's travel distance after each jump:
+
+        $$d'_n = h(y_0) + h(y_1) + \ldots + h(y_n) = \sum_{i=0}^{n} h(y_i)$$
+
+        \item Stop once the Wild kangaroo either falls into or passes the trap which the Tame kangaroo is in:
+        \begin{itemize}
+            \item If $y_i = x_N$, then the trap worked and the Wild kangaroo was caught. The exponent we are looking for can now be obtained using the formula: $x = d'_i - d + b$
+
+            \item If $d'_i > b - a + d$, then the Wild kangaroo passed the trap (i.e. the algorithm failed)
+        \end{itemize}
+    \end{enumerate}
+\end{document}

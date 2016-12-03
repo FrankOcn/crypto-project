@@ -64,7 +64,7 @@ int main(int argc, char ** argv)
   }
   fclose(fp);
 
-  primes_product_tree = vec_mpz_product_tree(primes);
+  primes_product_tree = vec_mpz_product_tree(primes, primes->size);
   mpz_set(z, primes_product_tree->elems[0]);
 
   printf("Starting process.. \n");
@@ -88,11 +88,11 @@ int main(int argc, char ** argv)
 
     for (i = 0; i < BATCH_SIZE; i++)
     {
-      if (r_smooth_bools[i] != 0)
+      if (r_smooth_bools[i] == 1)
       {
         s_smooth_bools = batch_smooth_parts(z, primes_product_tree, s_batch, BATCH_SIZE);
         // both r and s values are smooth
-        if (s_smooth_bools[i] != 0)
+        if (s_smooth_bools[i] == 1)
         {
           char r_val[100];
           char s_val[100];
@@ -104,7 +104,6 @@ int main(int argc, char ** argv)
           fprintf(output, "%s:", s_val);
           fprintf(output, "%s:", pow_val);
           fprintf(output, "\n");
-          printf("--- !!!FOUND ONE!!! ---\n");
           diff = clock() - start;
           msec = diff * 1000 / CLOCKS_PER_SEC; 
           printf("--- !!!FOUND ONE!!! ---\n");
